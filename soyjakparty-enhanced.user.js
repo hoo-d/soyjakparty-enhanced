@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        SPE
-// @version     3.0.0
+// @version     3.0.1
 // @namespace   SPE
 // @description SPE as a userscript or something
 // @license     SoyGPL; https://soystudios.serv00.net/soygnu/SOYGPL.txt 
@@ -73,7 +73,7 @@
   }
 
   function extUrlFor(pathInsideExt) {
-    return `https://github.com/hoo-d/soyjakparty-enhanced/blob/main/icons/${pathInsideExt}?raw=true`;
+    return `https://github.com/hoo-d/soyjakparty-enhanced/blob/main/${pathInsideExt}?raw=true`;
   }
 
   function createSEClockMenu() {
@@ -828,9 +828,9 @@
   const capcodes = document.querySelectorAll('.capcode');
 
   const badgeSources = {
-    '## Admin': extUrlFor('admin-gemjak.png'),
-    '## Mod': extUrlFor('janny-badge.png'),
-    '## Unused': extUrlFor('approver-oalgo.png'),
+    '## Admin': extUrlFor('icons/admin-gemjak.png'),
+    '## Mod': extUrlFor('icons/janny-badge.png'),
+    '## Unused': extUrlFor('icons/approver-oalgo.png'),
   };
 
   capcodes.forEach(capcode => {
