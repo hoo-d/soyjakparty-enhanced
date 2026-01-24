@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        SPE
-// @version     3.0.2
+// @version     3.1.0
 // @namespace   SPE
 // @description SPE as a userscript or something
 // @license     SoyGPL; https://soystudios.serv00.net/soygnu/SOYGPL.txt
@@ -9,7 +9,7 @@
 // @match       *://soyjakwiki.org/*
 // @connect     soybooru.com
 // @connect     raw.githubusercontent.com
-// @connect		*
+// @connect     *
 // @grant       GM_xmlhttpRequest
 // @grant       GM_download
 // @run-at      document-end
@@ -150,7 +150,7 @@
 		toggleBtn.style.position = 'fixed';
 		toggleBtn.style.top = '25px';
 		toggleBtn.style.right = '10px';
-		toggleBtn.style.zIndex = '9999';
+		toggleBtn.style.zIndex = '30';
 		toggleBtn.style.padding = '6px 8px';
 
 		toggleBtn.style.borderRadius = '5px';
@@ -163,7 +163,7 @@
 		menuBox.style.position = 'fixed';
 		menuBox.style.top = '60px';
 		menuBox.style.right = '10px';
-		menuBox.style.zIndex = '100000';
+		menuBox.style.zIndex = '31';
 		menuBox.style.backdropFilter = 'blur(20px)';
 		menuBox.style.backgroundColor = 'rgba(255, 255, 255, 0.3)';
 		menuBox.style.WebkitBackdropFilter = 'blur(10px)'
@@ -172,7 +172,7 @@
 		menuBox.style.padding = '10px 15px';
 
 		menuBox.style.fontSize = '13px';
-		menuBox.style.zIndex = '9999';
+		menuBox.style.zIndex = '31';
 		menuBox.style.minWidth = '230px';
 		menuBox.style.display = 'none';
 		menuBox.style.maxHeight = '80vh';
@@ -526,58 +526,6 @@
 			}
 		}
 
-		const settingsDivider3 = document.createElement('hr');
-		settingsContainer.appendChild(settingsDivider3);
-
-		const customBGLabel = document.createElement('label');
-		customBGLabel.textContent = 'Upload custom background:';
-		customBGLabel.style.flex = '1';
-
-		const customBGInput = document.createElement('input');
-		customBGInput.type = 'file';
-		customBGInput.accept = 'image/*';
-		customBGInput.style.flex = '2';
-
-		const clearBGBtn = document.createElement('button');
-		clearBGBtn.textContent = '🗑️';
-		clearBGBtn.title = 'Remove custom sound';
-		clearBGBtn.style.padding = '4px 8px';
-		clearBGBtn.style.cursor = 'pointer';
-
-		clearBGBtn.style.borderRadius = '4px';
-
-		settingsContainer.appendChild(customBGLabel);
-		settingsContainer.appendChild(customBGInput);
-		settingsContainer.appendChild(clearBGBtn);
-
-		customBGInput.addEventListener('change', e => {
-			const file = e.target.files[0];
-			if (file) {
-				const reader = new FileReader();
-				reader.onload = function (ev) {
-					const imageUrl = ev.target.result;
-
-					document.body.style.backgroundImage = `url(${imageUrl})`;
-					document.body.style.backgroundSize = 'cover';
-					document.body.style.backgroundPosition = 'center center';
-					document.body.style.backgroundAttachment = 'fixed';
-
-					localStorage.setItem('userBackground', imageUrl);
-				};
-				reader.readAsDataURL(file);
-			}
-		});
-
-		clearBGBtn.addEventListener('click', () => {
-			document.body.style.backgroundImage = '';
-			document.body.style.backgroundSize = '';
-			document.body.style.backgroundPosition = '';
-			document.body.style.backgroundAttachment = '';
-
-			localStorage.removeItem('userBackground');
-			alert('(You) removed a custom background. Reverted to default.');
-		});
-
 		soundSelect.id = 'notif-sound-select';
 
 		let customSoundURL = localStorage.getItem('customSound') || null;
@@ -717,16 +665,6 @@
 		renderCustomLinks();
 		document.body.appendChild(menuBox);
 
-		window.addEventListener('load', () => {
-			const savedBackground = localStorage.getItem('userBackground');
-			if (savedBackground) {
-				document.body.style.backgroundImage = `url(${savedBackground})`;
-				document.body.style.backgroundSize = 'cover';
-				document.body.style.backgroundPosition = 'center center';
-				document.body.style.backgroundAttachment = 'fixed';
-			}
-		});
-
 		toggleBtn.addEventListener('click', () => {
 			const isOpening = menuBox.style.display === 'none';
 			menuBox.style.display = isOpening ? 'block' : 'none';
@@ -825,6 +763,29 @@
 		lastCount = currentCount;
 	}, 1000);
 
+	let threadJson = {}
+
+	async function getThreadJson(refresh = false) {
+		if (!threadJson || !Array.isArray(threadJson.posts) || refresh) {
+			const jsonUrl = location.origin + location.pathname.replace('.html', '.json');
+			threadJson = await fetch(jsonUrl).then(r => r.json());
+		}
+		return threadJson;
+	}
+
+	async function getPostJson(id) {
+		id = Number(id);
+
+		let json = await getThreadJson();
+		const post = json.posts.find(p => p.no === id);
+
+		if (post) return post;
+		
+		// retry with refresh
+		json = await getThreadJson(true);
+		return json.posts.find(p => p.no === id);
+	}
+
 	const enhancedButtons = new WeakSet();
 
 	const buttonConfigs = [
@@ -840,9 +801,9 @@
 		button.href = 'javascript:void(0);';
 		button.title = config.title;
 		button.dataset.quoteType = config.type;
-		button.textContent = config.symbol;
+		button.textContent = `[${config.symbol}]`;
 
-		button.style.color = config.color;
+		//button.style.color = config.color; coloring these is faggy
 		button.style.textDecoration = 'none';
 		button.style.fontWeight = 'normal';
 		button.style.padding = '0';
@@ -864,7 +825,6 @@
 			button.addEventListener('click', handleQuoteClick);
 			group.appendChild(button);
 
-
 			if (config !== buttonConfigs[buttonConfigs.length - 1]) {
 				group.appendChild(document.createTextNode(' '));
 			}
@@ -872,21 +832,15 @@
 
 		return group;
 	}
-	function handleQuoteClick(event) {
+	async function handleQuoteClick(event) {
 		event.preventDefault();
 		const button = event.currentTarget;
 
-		if (typeof jQuery !== 'undefined') {
-			jQuery(window).trigger('cite', [0, false]);
-		}
+		let postId = button.closest('span').previousElementSibling.innerHTML;
+		let postJson = await getPostJson(postId);
+		if (!postJson) return;
 
-		const post = button.closest('.post');
-		if (!post) return;
-
-		const body = post.querySelector('.body');
-		if (!body) return;
-
-		let originalText = body.innerText;
+		let originalText = postJson.___body_nomarkup;
 		let text = '';
 
 		switch (button.dataset.quoteType) {
@@ -897,28 +851,17 @@
 				text = "^" + originalText.split("\n").join("\n^");
 				break;
 			case 'unquote':
-				text = originalText.replace(/^[><^\s]+/gm, '');
+				text = originalText.replace(/^[><^\s]/gm, '');
 				break;
 			default:
 				text = ">" + originalText.split("\n").join("\n>");
 		}
 
-		var textareas = document.getElementsByName("body");
-		var scrollX = window.scrollX || window.pageXOffset;
-		var scrollY = window.scrollY || window.pageYOffset;
+		document.getElementById("body").value = text;
 
-		for (var i = 0; i < textareas.length; i++) {
-			textareas[i].value = text;
-			if (i + 1 == textareas.length) {
-				if (typeof jQuery !== 'undefined') {
-					jQuery(textareas[i]).trigger('focus');
-				} else {
-					textareas[i].focus();
-				}
-			}
+		if (typeof jQuery !== 'undefined') {
+			jQuery(unsafeWindow).trigger('cite', [0, false]);
 		}
-
-		window.scrollTo(scrollX, scrollY);
 	}
 
 	function enhanceQuoteButton(originalButton) {
@@ -933,29 +876,42 @@
 		}
 	}
 
-	let processing = false;
-	function handleMutations() {
-		if (processing) return;
-		processing = true;
-
-		setTimeout(() => {
-			const quoteButtons = document.querySelectorAll('a.post_quote:not(.enhanced-quote)');
-			quoteButtons.forEach(enhanceQuoteButton);
-			processing = false;
-		}, 100);
+	function handleQuoteButtons() {
+		const quoteButtons = document.querySelectorAll('a.post_quote:not(.enhanced-quote)');
+		quoteButtons.forEach(enhanceQuoteButton);
 	}
 
-	function initExtension() {
-		const observer = new MutationObserver(handleMutations);
-		observer.observe(document.body, {
+	function observeQuoteButtons() {
+		const observer = new MutationObserver(handleQuoteButtons);
+		observer.observe(document.querySelector('.thread'), {
 			childList: true,
 			subtree: true
 		});
 
-		handleMutations();
+		handleQuoteButtons();
 	}
 
-	initExtension();
+	if (document.body.classList.contains('active-thread')) {
+		observeQuoteButtons();
+		getThreadJson();
+
+		const menuTimer = setInterval(() => {
+			if (unsafeWindow.Menu && unsafeWindow.Menu.add_item && unsafeWindow.Menu.onclick) {
+				clearInterval(menuTimer);
+
+				unsafeWindow.Menu.add_item('spe-copy-raw', 'Copy Raw', 'Copies the raw post text to your clipboard.');
+
+				unsafeWindow.Menu.onclick((e, $buffer) => {
+					let postId = e.target.parentElement.querySelector('a.post_no:not([id])').innerHTML;
+					
+					$buffer.find('#spe-copy-raw').on('click', async () => {
+						let postJson = await getPostJson(postId);
+						navigator.clipboard.writeText(postJson.___body_nomarkup);
+					});
+				});
+			}
+		}, 50);
+	}
 
 	window.addEventListener('storage', (event) => {
 		if (event.key === 'transparencyDisabled') {
@@ -973,7 +929,7 @@
 	updatePopup.style.top = '50%';
 	updatePopup.style.left = '50%';
 	updatePopup.style.transform = 'translate(-50%, -50%)';
-	updatePopup.style.zIndex = '100000';
+	updatePopup.style.zIndex = '31';
 	updatePopup.style.background = 'white';
 	updatePopup.style.padding = '30px';
 	updatePopup.style.borderRadius = '10px';
@@ -1001,14 +957,14 @@
 	const udiv = document.createElement('hr');
 
 	const githubLink = document.createElement('a');
-	githubLink.href = 'https://github.com/extteen/soyjakparty-enhanced';
+	githubLink.href = 'https://github.com/hoo-d/soyjakparty-enhanced';
 	githubLink.target = '_blank';
 	githubLink.textContent = 'GitHub Repo';
 	githubLink.style.display = 'block';
 	githubLink.style.marginTop = '10px';
 
 	const changelogLink = document.createElement('a');
-	changelogLink.href = 'https://github.com/extteen/soyjakparty-enhanced/releases';
+	changelogLink.href = 'https://github.com/hoo-d/soyjakparty-enhanced/commits/main';
 	changelogLink.target = '_blank';
 	changelogLink.textContent = 'Changelog';
 	changelogLink.style.display = 'block';
@@ -1081,7 +1037,7 @@
 	debugMenu.style.background = '#fff';
 	debugMenu.style.border = '1px solid #ccc';
 	debugMenu.style.fontSize = '12px';
-	debugMenu.style.zIndex = '100001';
+	debugMenu.style.zIndex = '32';
 
 	const debugTitle = document.createElement('div');
 	debugTitle.textContent = 'Debug Menu';
@@ -1230,7 +1186,7 @@
 	soybooruFloatingWindow.style.border = '1px solid #ccc';
 	soybooruFloatingWindow.style.borderRadius = '8px';
 	soybooruFloatingWindow.style.boxShadow = '0 5px 15px rgba(0,0,0,0.3)';
-	soybooruFloatingWindow.style.zIndex = '10000';
+	soybooruFloatingWindow.style.zIndex = '101';
 	soybooruFloatingWindow.style.resize = 'both';
 	soybooruFloatingWindow.style.minWidth = '250px';
 	soybooruFloatingWindow.style.minHeight = '150px';
@@ -1296,6 +1252,7 @@
 	windowContent.appendChild(floatingLoadingIndicator);
 
 	const floatingSearchResultsDisplay = document.createElement('div');
+	floatingSearchResultsDisplay.innerHTML = `<p style="text-align: center; color: #888; grid-column: 1 / -1;">Enter tags and press Enter to search.`;
 	floatingSearchResultsDisplay.classList.add('soybooru-search-results-floating');
 	floatingSearchResultsDisplay.style.display = 'grid';
 	floatingSearchResultsDisplay.style.gridTemplateColumns = 'repeat(auto-fill, minmax(100px, 1fr))';
@@ -1370,7 +1327,7 @@
 	thumbnailContextMenu.style.border = '1px solid #ccc';
 	thumbnailContextMenu.style.borderRadius = '4px';
 	thumbnailContextMenu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
-	thumbnailContextMenu.style.zIndex = '10001';
+	thumbnailContextMenu.style.zIndex = '103';
 	thumbnailContextMenu.style.padding = '5px 0';
 
 	document.body.appendChild(thumbnailContextMenu);
@@ -1562,8 +1519,6 @@
 
 				thumbnailContextMenu.innerHTML = '';
 
-
-
 				addContextMenuItem('Download', async (data, textbox) => {
 					GM_download({
 						url: post.fullImageUrl,
@@ -1571,18 +1526,44 @@
 					});
 				}, post, targetTextbox);
 
+				addContextMenuItem('Add File', async (data, textbox) => {
+					if (typeof addFile !== 'function') {
+						console.error('addFile function not found. Is the "Drag and drop file selection" option enabled?');
+						return;
+					}
+
+					const imageUrl = post.fullImageUrl;
+					GM_xmlhttpRequest({
+						url: imageUrl,
+						responseType: 'blob',
+						anonymous: true,
+						onload(response) {
+							if (response.status !== 200) {
+								console.error(`HTTP error; status code ${response.status} received for URL ${url}`);
+								return;
+							}
+
+							const blob = response.response;
+							let filename = imageUrl.split('/').pop();
+							addFile(new File([blob], filename, { type: blob.type }));
+						},
+						onerror(err) {
+							console.error('Failed to fetch image', err);
+						},
+					});
+				}, post, targetTextbox);
+
 				addContextMenuItem('Embed Thumbnail', (data, textbox) => {
 					insertTextIntoTextbox(textbox, `[thumb]${post.postId}[/thumb]`);
-					soybooruFloatingWindow.style.display = 'none';
 				}, post, targetTextbox);
 
 				addContextMenuItem('Open in New Tab', (data) => {
 					window.open(`https://soybooru.com/post/view/${data.postId}`, '_blank');
-					soybooruFloatingWindow.style.display = 'none';
 				}, post, targetTextbox);
 
 				thumbnailContextMenu.style.left = `${e.clientX}px`;
 				thumbnailContextMenu.style.top = `${e.clientY}px`;
+				thumbnailContextMenu.style.position = 'fixed';
 				thumbnailContextMenu.style.display = 'block';
 			});
 
@@ -1618,6 +1599,9 @@
 
 		const formatMenu = document.getElementById('text-format-menu');
 		if (formatMenu) applyTransparencyEffects(formatMenu, isTransparent);
+
+		const floodMenu = document.getElementById('flood-menu');
+		if (floodMenu) applyTransparencyEffects(floodMenu, isTransparent);
 
 		const soymojiMenu = document.querySelector('.soymoji-menu');
 		if (soymojiMenu) applyTransparencyEffects(soymojiMenu, isTransparent);
@@ -1728,7 +1712,7 @@
 	formatMenu.id = "text-format-menu";
 	formatMenu.style.display = 'none';
 	formatMenu.style.position = 'absolute';
-	formatMenu.style.zIndex = '9999';
+	formatMenu.style.zIndex = '1001';
 	formatMenu.style.padding = '5px';
 	formatMenu.style.borderRadius = '5px';
 	formatMenu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
@@ -1878,11 +1862,83 @@
 
 	document.body.appendChild(formatMenu);
 
+	const floodMenu = document.createElement('div');
+	floodMenu.id = 'flood-menu';
+	floodMenu.style.display = 'none';
+	floodMenu.style.position = 'absolute';
+	floodMenu.style.zIndex = '1001';
+	floodMenu.style.padding = '5px';
+	floodMenu.style.borderRadius = '5px';
+	floodMenu.style.boxShadow = '0 2px 5px rgba(0,0,0,0.2)';
+	applyTransparencyEffects(floodMenu, localStorage.getItem('transparencyDisabled') !== 'true');
+
+	let section = document.createElement('div');
+	section.style.marginBottom = '8px';
+
+	let title = document.createElement('div');
+	title.innerText = 'Mass Cite';
+	title.style.fontWeight = 'bold';
+	title.style.marginBottom = '5px';
+	section.appendChild(title);
+
+	// 5000 chars max
+	// 250 nulines max
+
+	let massCite = async (event) => {
+		event.preventDefault();
+		if (!document.body.classList.contains('active-thread')) return;
+		if (!event.target || !event.target.dataset.meow) return;
+		const json = await getThreadJson(true);
+		const ids = json.posts.map(p => p.no);
+		let str = '';
+		ids.forEach(id => str = str + '>>' + id + event.target.dataset.meow);
+		
+		while ((str.match(/\n/g) || []).length >= 250)
+			str = str.replace(/\n(?![\s\S]*\n)/, ' ');
+
+		str = str.substring(Math.max(0, str.length - 5000), str.length);
+
+		insertTextIntoTextbox(document.querySelector('#body'), str);
+	};
+
+	let buttonRow = document.createElement('div');
+	buttonRow.style.display = 'flex';
+	buttonRow.style.flexWrap = 'wrap';
+	buttonRow.style.gap = '5px';
+
+	let button = document.createElement('button');
+	button.innerText = 'nulines';
+	button.dataset.meow = '\n';
+	button.style.padding = '5px 8px';
+	button.style.cursor = 'pointer';
+	button.style.borderRadius = '1px';
+	button.style.fontSize = '12px';
+	button.style.whiteSpace = 'nowrap';
+	button.addEventListener('click', massCite);
+	buttonRow.appendChild(button);
+
+	button = document.createElement('button');
+	button.innerText = 'space';
+	button.dataset.meow = ' ';
+	button.style.padding = '5px 8px';
+	button.style.cursor = 'pointer';
+	button.style.borderRadius = '1px';
+	button.style.fontSize = '12px';
+	button.style.whiteSpace = 'nowrap';
+	button.addEventListener('click', massCite);
+	buttonRow.appendChild(button);
+
+	section.appendChild(buttonRow);
+	
+	floodMenu.appendChild(section);
+
+	document.body.appendChild(floodMenu);
+
 	const soymojiMenu = document.createElement('div');
 	soymojiMenu.classList.add("soymoji-menu");
 	soymojiMenu.style.display = 'none';
 	soymojiMenu.style.position = 'absolute';
-	soymojiMenu.style.zIndex = '9999';
+	soymojiMenu.style.zIndex = '1001';
 	soymojiMenu.style.padding = '5px';
 	soymojiMenu.style.gridTemplateColumns = 'repeat(7, 1fr)';
 	soymojiMenu.style.gap = '2px';
@@ -2014,41 +2070,11 @@
 		searchButton.type = "button";
 		buttonColumn.appendChild(searchButton);
 
-		searchButton.addEventListener('click', () => {
-			const targetTextbox = document.getElementById('body');
-
-			if (targetTextbox && (targetTextbox.tagName === 'TEXTAREA' || targetTextbox.tagName === 'INPUT' || targetTextbox.isContentEditable)) {
-				soybooruFloatingWindow.currentTextbox = targetTextbox;
-			} else {
-				soybooruFloatingWindow.currentTextbox = document.activeElement;
-				if (soybooruFloatingWindow.currentTextbox && !(soybooruFloatingWindow.currentTextbox.tagName === 'TEXTAREA' || soybooruFloatingWindow.currentTextbox.tagName === 'INPUT' || soybooruFloatingWindow.currentTextbox.isContentEditable)) {
-					soybooruFloatingWindow.currentTextbox = document.querySelector('textarea, input[type="text"], input[type="search"], [contenteditable="true"]');
-				}
-				if (!soybooruFloatingWindow.currentTextbox) {
-					console.warn("No suitable text input or contenteditable element found on the page, even after trying to target #body.");
-				}
-			}
-
-			soybooruFloatingWindow.style.display = 'flex';
-			soybooruFloatingWindow.offsetHeight;
-
-			floatingSearchInput.value = '';
-			if (soybooruFloatingWindow.currentTextbox) {
-				let targetName = soybooruFloatingWindow.currentTextbox.id || soybooruFloatingWindow.currentTextbox.name || soybooruFloatingWindow.currentTextbox.tagName.toLowerCase();
-				floatingSearchResultsDisplay.innerHTML = `<p style="text-align: center; color: #888; grid-column: 1 / -1;">Enter tags and press Enter to search.`;
-			} else {
-				floatingSearchResultsDisplay.innerHTML = '<p style="text-align: center; color: #F44336; grid-column: 1 / -1;">No text input detected. Embed/Insert features may not work. Please click a text box before searching.</p>';
-			}
-
-			floatingLoadingIndicator.style.display = 'none';
-			floatingSearchInput.focus();
-
-			currentSearchTags = '';
-			currentPageNumber = 1;
-			pageNumberInput.value = currentPageNumber;
-			prevPageButton.disabled = true;
-			nextPageButton.disabled = true;
-		});
+		const floodButton = document.createElement('button');
+		floodButton.classList.add("flood-button");
+		floodButton.innerText = "Flood Menu";
+		floodButton.type = "button";
+		buttonColumn.appendChild(floodButton);
 
 		textbox.dataset.enhanced = "true";
 	}
@@ -2096,7 +2122,7 @@
 		dropdownMenu.style.borderRadius = '4px';
 		dropdownMenu.style.boxShadow = '0 2px 6px rgba(0,0,0,0.2)';
 		dropdownMenu.style.display = 'none';
-		dropdownMenu.style.zIndex = '9999';
+		dropdownMenu.style.zIndex = '11';
 		dropdownMenu.style.minWidth = '120px';
 		dropdownMenu.style.padding = '5px 0';
 		wrapper.appendChild(dropdownMenu);
@@ -2243,8 +2269,6 @@
 		attributeFilter: ['style', 'class']
 	});
 
-
-
 	document.addEventListener('click', (event) => {
 		if (event.target && event.target.classList.contains('soymoji-button')) {
 			event.preventDefault();
@@ -2282,6 +2306,25 @@
 			event.preventDefault();
 			event.stopPropagation();
 
+			const targetTextbox = document.getElementById('body');
+
+			if (targetTextbox && (targetTextbox.tagName === 'TEXTAREA' || targetTextbox.tagName === 'INPUT' || targetTextbox.isContentEditable)) {
+				soybooruFloatingWindow.currentTextbox = targetTextbox;
+			} else {
+				soybooruFloatingWindow.currentTextbox = document.activeElement;
+				if (soybooruFloatingWindow.currentTextbox && !(soybooruFloatingWindow.currentTextbox.tagName === 'TEXTAREA' || soybooruFloatingWindow.currentTextbox.tagName === 'INPUT' || soybooruFloatingWindow.currentTextbox.isContentEditable)) {
+					soybooruFloatingWindow.currentTextbox = document.querySelector('textarea, input[type="text"], input[type="search"], [contenteditable="true"]');
+				}
+				if (!soybooruFloatingWindow.currentTextbox) {
+					console.warn("No suitable text input or contenteditable element found on the page, even after trying to target #body.");
+				}
+			}
+
+			soybooruFloatingWindow.style.display = 'flex';
+
+			floatingSearchInput.focus();
+
+			pageNumberInput.value = currentPageNumber;
 
 			const searchContainer = event.target.closest('.textbox-wrapper')?.querySelector('.soybooru-search-container');
 			const searchInput = searchContainer?.querySelector('.soybooru-search-input');
@@ -2299,6 +2342,23 @@
 			}
 		}
 
+		if (event.target && event.target.classList.contains('flood-button')) {
+			event.preventDefault();
+			event.stopPropagation();
+			const floodMenu = document.getElementById('flood-menu');
+
+			if (floodMenu) {
+				const rect = event.target.getBoundingClientRect();
+				floodMenu.style.left = `${rect.right + 10}px`;
+				floodMenu.style.top = `${rect.top + window.scrollY}px`;
+				floodMenu.style.display = floodMenu.style.display === 'none' ? 'block' : 'none';
+
+				const textbox = event.target.closest('.textbox-wrapper')?.querySelector('textarea[name="body"]');
+				if (textbox) {
+					floodMenu.dataset.activeTextboxId = textbox.id || (textbox.id = `textbox-${Date.now()}-main`);
+				}
+			}
+		}
 
 		if (event.target && event.target.classList.contains('email-dropdown-button')) {
 			event.preventDefault();
@@ -2427,6 +2487,11 @@
 		const formatMenu = document.getElementById('text-format-menu');
 		if (formatMenu && formatMenu.style.display !== 'none' && !formatMenu.contains(e.target) && !e.target.classList.contains('format-button-toggle')) {
 			formatMenu.style.display = 'none';
+		}
+
+		const floodMenu = document.getElementById('flood-menu');
+		if (floodMenu && floodMenu.style.display !== 'none' && !floodMenu.contains(e.target) && !e.target.classList.contains('flood-button')) {
+			floodMenu.style.display = 'none';
 		}
 
 		const soymojiMenu = document.querySelector('.soymoji-menu');
@@ -2613,7 +2678,7 @@
 			background: 'white',
 			backdropFilter: 'blur(4px)',
 			cursor: 'pointer',
-			zIndex: '32',
+			zIndex: '17',
 			fontSize: '11px',
 			color: '#222',
 			boxShadow: '0 1px 2px rgba(0,0,0,0.1)'
@@ -2720,7 +2785,6 @@
 
 	function updateLabelFor(inst) {
 		if (!inst || !inst.previewBtn || !inst.textarea) return;
-		const enablePreview = flags.get('lp_enablePreview') === 'true';
 		const enableCounter = flags.get('lp_enableCounter') === 'true';
 		const forcePreviewText = flags.get('lp_forcePreviewText') === 'true';
 
@@ -2729,9 +2793,7 @@
 
 		if (forcePreviewText) {
 			inst.previewBtn.textContent = 'Preview';
-		} else if (enableCounter && !enablePreview) {
-			inst.previewBtn.textContent = `${chars} | ${lines}`;
-		} else if (enableCounter && enablePreview) {
+		} else if (enableCounter) {
 			inst.previewBtn.textContent = `${chars} | ${lines}`;
 		} else {
 			inst.previewBtn.textContent = 'Preview';
@@ -3030,90 +3092,89 @@
 		document.body.appendChild(panel);
 
 		const css = `
-      #soysphere-panel-ext-simple {
-          position: fixed;
-          top: 40px;
-          right: 200px;
-          width: auto;
-          background-color: transparent;
-          border: none;
-          box-shadow: none;
-          padding: 0;
-          z-index: 1;
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-          gap: 5px;
-      }
+		#soysphere-panel-ext-simple {
+			position: fixed;
+			top: 40px;
+			right: 200px;
+			width: auto;
+			background-color: transparent;
+			border: none;
+			box-shadow: none;
+			padding: 0;
+			z-index: 1;
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+			gap: 5px;
+		}
 
-      #soysphere-image-text-container-ext-simple {
-          position: relative;
-          display: flex;
-          flex-direction: row;
-          align-items: center;
-          gap: 5px;
-          width: auto;
-          height: auto;
-          flex-shrink: 0;
-      }
+		#soysphere-image-text-container-ext-simple {
+			position: relative;
+			display: flex;
+			flex-direction: row;
+			align-items: center;
+			gap: 5px;
+			width: auto;
+			height: auto;
+			flex-shrink: 0;
+		}
 
-      #soysphere-image-ext-simple {
-          width: 50px;
-          height: 50px;
-          object-fit: contain;
-          /* border-radius: 50%; (kept removed as per previous request) */
-      }
+		#soysphere-image-ext-simple {
+			width: 50px;
+			height: 50px;
+			object-fit: contain;
+			/* border-radius: 50%; (kept removed as per previous request) */
+		}
 
-      #soysphere-text-ext-simple {
-          position: static;
-          transform: none;
-          top: auto;
-          left: auto;
-          color: white;
-          font-size: 20px;
-          font-weight: bold;
-          text-shadow: 1px 1px 2px black, 0 0 3px black;
-          text-align: right;
-          white-space: nowrap;
-          pointer-events: auto;
-          width: auto;
-      }
+		#soysphere-text-ext-simple {
+			position: static;
+			transform: none;
+			top: auto;
+			left: auto;
+			color: white;
+			font-size: 20px;
+			font-weight: bold;
+			text-shadow: 1px 1px 2px black, 0 0 3px black;
+			text-align: right;
+			white-space: nowrap;
+			pointer-events: auto;
+			width: auto;
+		}
 
-      #soysphere-links-container-ext-simple {
-          display: flex;
-          flex-direction: column;
-          align-items: flex-end;
-      }
+		#soysphere-links-container-ext-simple {
+			display: flex;
+			flex-direction: column;
+			align-items: flex-end;
+		}
 
-      #soysphere-links-container-ext-simple a {
-          background-color: transparent;
-          border: none;
-          padding: 1px 0;
-          margin-bottom: 4px;
-          font-size: 15px;
-          text-decoration: underline;
+		#soysphere-links-container-ext-simple a {
+			background-color: transparent;
+			border: none;
+			padding: 1px 0;
+			margin-bottom: 4px;
+			font-size: 15px;
+			text-decoration: underline;
 
-          display: flex;
-          align-items: center;
-          gap: 5px;
-      }
+			display: flex;
+			align-items: center;
+			gap: 5px;
+		}
 
-      .soysphere-link-icon {
-          width: 16px;
-          height: 16px;
-          object-fit: contain;
-          flex-shrink: 0;
-      }
+		.soysphere-link-icon {
+			width: 16px;
+			height: 16px;
+			object-fit: contain;
+			flex-shrink: 0;
+		}
 
-      #soysphere-links-container-ext-simple a:hover {
-          /* color: #0056b3; */
-          /* text-decoration: none; */
-      }
+		#soysphere-links-container-ext-simple a:hover {
+			/* color: #0056b3; */
+			/* text-decoration: none; */
+		}
 
-      #soysphere-links-container-ext-simple a:last-child {
-          margin-bottom: 0;
-      }
-    `;
+		#soysphere-links-container-ext-simple a:last-child {
+			margin-bottom: 0;
+		}`;
 
 		const styleSheet = document.createElement("style");
 		styleSheet.type = "text/css";

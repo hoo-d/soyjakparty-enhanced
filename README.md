@@ -8,7 +8,8 @@ Install [Violentmonkey](https://violentmonkey.github.io/) or any other userscrip
 
 ## Features
 
-* Everything from [the original repo](https://github.com/extteen/soyjakparty-enhanced)
+* Everything from [the original repo](https://github.com/extteen/soyjakparty-enhanced) (ev&o I removed some stuff that not even nophono uses)
+* A couple fixes and features
 * Not having to install an extension for this
 
 ## License
