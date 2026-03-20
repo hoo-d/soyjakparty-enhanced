@@ -1354,7 +1354,7 @@
 			if (!query) return;
 
 			if (soybooruDirectSearch) {
-				window.open(`https://soybooru.com/post/list/${encodeURIComponent(query)}/1`, '_blank');
+				window.open(`https://soybooru.com/booru?q=${encodeURIComponent(query)}/1`, '_blank');
 				soybooruFloatingWindow.style.display = 'none';
 			} else {
 				currentSearchTags = query;
