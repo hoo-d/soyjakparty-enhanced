@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        SPE
-// @version     3.1.1
+// @version     3.1.2
 // @namespace   SPE
 // @description SPE as a userscript or something
 // @license     SoyGPL; https://soystudios.serv00.net/soygnu/SOYGPL.txt
@@ -1354,7 +1354,7 @@
 			if (!query) return;
 
 			if (soybooruDirectSearch) {
-				window.open(`https://soybooru.com/booru?q=${encodeURIComponent(query)}/1`, '_blank');
+				window.open(`https://soybooru.com/booru?q=${encodeURIComponent(query)}`, '_blank');
 				soybooruFloatingWindow.style.display = 'none';
 			} else {
 				currentSearchTags = query;
