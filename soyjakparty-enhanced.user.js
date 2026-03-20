@@ -1059,19 +1059,12 @@
 
 	//SOYMOJI, TEXT FORMAT AND OTHER RAISIN
 
-	async function fetchHtmlContent(url) {
+	async function fetchContent(url) {
 		try {
-			/*const response = await fetch(url);
-			if (!response.ok) {
-			  const error = new Error(`HTTP error! Status: ${response.status} for URL: ${url}`);
-			  error.status = response.status;
-			  throw error;
-			}
-			const htmlContent = await response.text();
-			return htmlContent;*/
-			const htmlContent = await new Promise((resolve, reject) => {
+			const content = await new Promise((resolve, reject) => {
 				GM_xmlhttpRequest({
 					method: "GET",
+					responseType: 'json',
 					url,
 					onload(response) {
 						if (response.status < 200 || response.status >= 300) {
@@ -1080,94 +1073,18 @@
 							reject(error);
 							return;
 						}
-						resolve(response.responseText);
+						resolve(response.response);
 					},
 					onerror(err) {
 						reject(err);
 					}
 				})
 			});
-			return htmlContent;
+			return content;
 		} catch (error) {
-			console.error('Error fetching HTML content:', error);
+			console.error('Error fetching content:', error);
 			throw error;
 		}
-	}
-
-	function parseAndExtractSoybooruThumbnails(htmlString) {
-		const parser = new DOMParser();
-		const doc = parser.parseFromString(htmlString, 'text/html');
-
-		const thumbnailContainer = doc.querySelector('section#image-list div.navside.tab div.shm-image-list');
-		const extractedThumbnails = [];
-
-		if (thumbnailContainer) {
-			const postLinks = thumbnailContainer.querySelectorAll('a.shm-thumb-link');
-
-			postLinks.forEach(linkElement => {
-				const postId = linkElement.dataset.postId;
-				const tags = linkElement.dataset.tags || linkElement.querySelector('img')?.title?.split(' // ')[0] || 'N/A';
-
-				const imgElement = linkElement.querySelector('img');
-				let rawThumbnailSrc = imgElement ? imgElement.getAttribute('src') : null;
-
-				let thumbnailUrl = null;
-				let fullImageUrl = null;
-
-				if (rawThumbnailSrc && postId) {
-					if (rawThumbnailSrc.startsWith('http://') || rawThumbnailSrc.startsWith('https://')) {
-						if (rawThumbnailSrc.includes('soybooru.com')) {
-							thumbnailUrl = rawThumbnailSrc;
-						} else {
-							console.warn("Found absolute thumbnail URL not from soybooru.com:", rawThumbnailSrc);
-							return;
-						}
-					} else if (rawThumbnailSrc.startsWith('//')) {
-						thumbnailUrl = `https:${rawThumbnailSrc}`;
-					} else if (rawThumbnailSrc.startsWith('/')) {
-						thumbnailUrl = `https://soybooru.com${rawThumbnailSrc}`;
-					} else {
-						thumbnailUrl = `https://soybooru.com/${rawThumbnailSrc}`;
-					}
-
-					const thumbUrlParts = thumbnailUrl.split('/');
-					const hash = thumbUrlParts[thumbUrlParts.length - 2];
-
-					const originalMime = linkElement.dataset.mime;
-					let originalExt = 'jpg';
-					if (originalMime) {
-						const mimeParts = originalMime.split('/');
-						if (mimeParts.length > 1) {
-							originalExt = mimeParts[1].toLowerCase();
-							if (originalExt === 'jpeg') originalExt = 'jpg';
-							if (originalExt === 'mp4') originalExt = 'webm';
-						}
-					} else if (imgElement && imgElement.src.includes('.')) {
-						originalExt = imgElement.src.split('.').pop();
-					}
-
-					const filenameTitlePart = 'SoyBooru';
-					const encodedFilenameTitle = encodeURIComponent(filenameTitlePart);
-
-					fullImageUrl = `https://soybooru.com/_images/${hash}/${postId}%20-%20${encodedFilenameTitle}.${originalExt}`;
-				}
-
-				if (postId && thumbnailUrl && fullImageUrl) {
-					extractedThumbnails.push({
-						postId: postId,
-						thumbnailUrl: thumbnailUrl,
-						fullImageUrl: fullImageUrl,
-						tags: tags
-					});
-				} else {
-					console.warn(`Skipping post due to missing crucial data. PostId: ${postId}, Thumbnail: ${thumbnailUrl}, Full Image: ${fullImageUrl}`);
-				}
-			});
-		} else {
-			console.warn('Soybooru thumbnail container (section#image-list div.navside.tab div.shm-image-list) not found.');
-		}
-
-		return extractedThumbnails;
 	}
 
 	const soybooruDirectSearch = localStorage.getItem('soybooruDirectSearch') === 'true';
@@ -1391,12 +1308,12 @@
 		prevPageButton.disabled = true;
 		nextPageButton.disabled = true;
 
-		const htmlUrl = `https://soybooru.com/post/list/${encodeURIComponent(tags)}/${page}`;
-		let htmlText = null;
+		const url = `https://soybooru.com/booru/index.pageContext.json?q=${encodeURIComponent(tags)}&page=${page}&pageSize=50`;
+		let json;
 		let is404 = false;
 
 		try {
-			htmlText = await fetchHtmlContent(htmlUrl);
+			json = await fetchContent(url);
 		} catch (error) {
 			if (error.status === 404) {
 				is404 = true;
@@ -1404,11 +1321,11 @@
 			console.error('Error during search:', error);
 		}
 
-		if (htmlText) {
-			const posts = parseAndExtractSoybooruThumbnails(htmlText);
+		console.log(json);
 
-			if (posts.length > 0) {
-				renderSoybooruResults(posts, floatingSearchResultsDisplay, soybooruFloatingWindow.currentTextbox);
+		if (json) {
+			if (json.data?.searchResults) {
+				renderSoybooruResults(json.data.searchResults, floatingSearchResultsDisplay, soybooruFloatingWindow.currentTextbox);
 				nextPageButton.disabled = false;
 			} else {
 				floatingSearchResultsDisplay.innerHTML = '<p style="text-align: center; color: #888; grid-column: 1 / -1;">No results found for these tags on this page.</p>';
@@ -1487,10 +1404,10 @@
 		}
 	});
 
-	function renderSoybooruResults(posts, resultsDisplayElement, targetTextbox) {
+	function renderSoybooruResults(searchResults, resultsDisplayElement, targetTextbox) {
 		resultsDisplayElement.innerHTML = '';
 
-		posts.forEach(post => {
+		searchResults.posts.forEach(post => {
 			const thumbWrapper = document.createElement('div');
 			thumbWrapper.classList.add('soybooru-thumb-item');
 			thumbWrapper.style.textAlign = 'center';
@@ -1503,9 +1420,9 @@
 			thumbWrapper.style.boxSizing = 'border-box';
 
 			const img = document.createElement('img');
-			img.src = post.thumbnailUrl;
-			img.alt = `Post ID: ${post.postId}`;
-			img.title = `ID: ${post.postId}\nTags: ${post.tags}`;
+			img.src = `https://soybooru.com/api/booru/posts/${post.id}/thumbnail`;
+			img.alt = `Post ID: ${post.id}`;
+			img.title = `ID: ${post.id}\nTags: ${post.tags.map(tag => tag.name).join(' ')}`;
 			img.style.maxWidth = '100%';
 			img.style.height = 'auto';
 			img.style.display = 'block';
@@ -1521,8 +1438,8 @@
 
 				addContextMenuItem('Download', async (data, textbox) => {
 					GM_download({
-						url: post.fullImageUrl,
-						name: post.fullImageUrl.split('/').pop() || `soybooru_${post.postId}`,
+						url: `https://soybooru.com/api/booru/posts/${post.id}/file`,
+						name: post.originalFileName,
 					});
 				}, post, targetTextbox);
 
@@ -1532,7 +1449,7 @@
 						return;
 					}
 
-					const imageUrl = post.fullImageUrl;
+					const imageUrl = `https://soybooru.com/api/booru/posts/${post.id}/file`;
 					GM_xmlhttpRequest({
 						url: imageUrl,
 						responseType: 'blob',
@@ -1544,8 +1461,7 @@
 							}
 
 							const blob = response.response;
-							let filename = imageUrl.split('/').pop();
-							addFile(new File([blob], filename, { type: blob.type }));
+							addFile(new File([blob], post.originalFileName, { type: blob.type }));
 						},
 						onerror(err) {
 							console.error('Failed to fetch image', err);
@@ -1554,11 +1470,11 @@
 				}, post, targetTextbox);
 
 				addContextMenuItem('Embed Thumbnail', (data, textbox) => {
-					insertTextIntoTextbox(textbox, `[thumb]${post.postId}[/thumb]`);
+					insertTextIntoTextbox(textbox, `[thumb]${post.id}[/thumb]`);
 				}, post, targetTextbox);
 
 				addContextMenuItem('Open in New Tab', (data) => {
-					window.open(`https://soybooru.com/post/view/${data.postId}`, '_blank');
+					window.open(`https://soybooru.com/post/view/${post.id}`, '_blank');
 				}, post, targetTextbox);
 
 				thumbnailContextMenu.style.left = `${e.clientX}px`;
