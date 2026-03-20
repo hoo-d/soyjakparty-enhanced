@@ -1,6 +1,6 @@
 // ==UserScript==
 // @name        SPE
-// @version     3.1.0
+// @version     3.1.1
 // @namespace   SPE
 // @description SPE as a userscript or something
 // @license     SoyGPL; https://soystudios.serv00.net/soygnu/SOYGPL.txt
