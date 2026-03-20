@@ -1,12 +1,11 @@
 // ==UserScript==
 // @name        SPE
-// @version     3.1.2
+// @version     3.2.0
 // @namespace   SPE
 // @description SPE as a userscript or something
 // @license     SoyGPL; https://soystudios.serv00.net/soygnu/SOYGPL.txt
 // @match       *://*.soyjak.st/*
 // @match       *://*.soyjak.party/*
-// @match       *://soyjakwiki.org/*
 // @connect     soybooru.com
 // @connect     raw.githubusercontent.com
 // @connect     *
@@ -16,11 +15,10 @@
 // @updateURL   https://github.com/hoo-d/soyjakparty-enhanced/blob/main/soyjakparty-enhanced.user.js?raw=true
 // @downloadURL https://github.com/hoo-d/soyjakparty-enhanced/blob/main/soyjakparty-enhanced.user.js?raw=true
 // @icon        data:image/png;base64,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
+// @noframes
 // ==/UserScript==
 
 (function () {
-	if (window.top !== window.self) return; // @noframes isn't the best
-
 	// MAIN FUNCTIONS O ALGO
 	// hoo-d release
 	//spaghetti code
@@ -538,7 +536,7 @@
 			if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
 			GM_xmlhttpRequest({
 				method: "GET",
-				url: customSoundURL ? customSoundURL : `https://raw.githubusercontent.com/hoo-d/soyjakparty-enhanced/refs/heads/main/audio/${soundSelect.value}`,
+				url: customSoundURL ? customSoundURL : extUrlFor(`audio/${soundSelect.value}`),
 				responseType: "blob",
 				onload: function (res) {
 					currentBlobUrl = URL.createObjectURL(res.response);
@@ -569,6 +567,28 @@
 			if (!customSoundURL) {
 				updateAudioSrc();
 			}
+		});
+
+		const settingsDivider3 = document.createElement('hr');
+		settingsContainer.appendChild(settingsDivider3);
+
+		const revealAnonFilenamesLabel = document.createElement('label');
+		revealAnonFilenamesLabel.textContent = ' Reveal anonymous filenames';
+		revealAnonFilenamesLabel.title = 'Reveals file names of files posted by people using the "Anonymous" posting option.';
+		revealAnonFilenamesLabel.style.display = 'block';
+		revealAnonFilenamesLabel.style.marginTop = '10px';
+
+		const revealAnonFilenamesCheckbox = document.createElement('input');
+		revealAnonFilenamesCheckbox.type = 'checkbox';
+		revealAnonFilenamesCheckbox.id = 'reveal-anon-filenames-toggle';
+
+		revealAnonFilenamesLabel.prepend(revealAnonFilenamesCheckbox);
+		settingsContainer.appendChild(revealAnonFilenamesLabel);
+
+		revealAnonFilenamesCheckbox.checked = localStorage.getItem('revealAnonFilenames') === 'true';
+
+		revealAnonFilenamesCheckbox.addEventListener('change', () => {
+			localStorage.setItem('revealAnonFilenames', revealAnonFilenamesCheckbox.checked);
 		});
 
 		const settingsDivider4 = document.createElement('hr');
@@ -885,15 +905,66 @@
 		const observer = new MutationObserver(handleQuoteButtons);
 		observer.observe(document.querySelector('.thread'), {
 			childList: true,
-			subtree: true
+			subtree: true,
 		});
 
 		handleQuoteButtons();
 	}
 
+	function handleAnonymousIDs() {
+		if (localStorage.getItem('revealAnonFilenames') !== 'true') return;
+		const anonymousIDs = [...document.getElementsByClassName('poster_id')].filter(el => el.textContent === 'ANONYMOUS');
+		anonymousIDs.forEach(async (idElement) => {
+			const post = idElement.closest('div:not(.op .handled)');
+			if (!post) return;
+
+			const filesElement = post.querySelector(':scope > .files');
+			if (!filesElement) return;
+
+			let files = filesElement.children;
+			if (files.length === 0) return;
+			files = Array.from(files).filter(el => !el.classList.contains('enhanced'));
+
+			const noElement = post.querySelector('.post_anchor');
+			if (!noElement) return;
+
+			const json = await getPostJson(noElement.id);
+			if (!json) return;
+
+			files.forEach((fileElement, index) => {
+				const fileinfo = fileElement.querySelector(':scope > .fileinfo');
+				if (!fileinfo) return;
+
+				const filenameElement = fileinfo.querySelector(':scope > a:nth-child(2)');
+				const downloadElement = fileinfo.querySelector(':scope > a:nth-child(3)');
+				if (!filenameElement || !downloadElement) return;
+
+				const fileJson = index === 0 ? json : json.extra_files[index - 1];
+				if (!fileJson) return;
+
+				fileElement.classList.add('enhanced');
+
+				let fileName = fileJson.filename + fileJson.ext;
+				filenameElement.innerText = fileName;
+				filenameElement.title = 'Anonymous file name revealed';
+				downloadElement.download = fileName;
+			});
+		});
+	}
+
+	function observeAnonymousIDs() {
+		const observer = new MutationObserver(handleAnonymousIDs);
+		observer.observe(document.querySelector('.thread'), {
+			childList: true,
+			subtree: true,
+		});
+		handleAnonymousIDs();
+	}
+
 	if (document.body.classList.contains('active-thread')) {
 		observeQuoteButtons();
 		getThreadJson();
+		observeAnonymousIDs();
 
 		const menuTimer = setInterval(() => {
 			if (unsafeWindow.Menu && unsafeWindow.Menu.add_item && unsafeWindow.Menu.onclick) {
@@ -911,6 +982,22 @@
 				});
 			}
 		}, 50);
+
+		window.addEventListener('keydown', (event) => {
+			if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return;
+			if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable)) return;
+			if (event.code === 'KeyR') document.getElementById('update_thread').click();
+			else if (event.code === 'KeyC') window.location.href = '../catalog.html';
+			else if (event.code === 'KeyI') window.location.href = '../index.html';
+		});
+	} else if (document.body.classList.contains('active-index') || document.body.classList.contains('active-catalog')) {
+		window.addEventListener('keydown', (event) => {
+			if (event.ctrlKey || event.altKey || event.shiftKey || event.metaKey) return;
+			if (event.target && (event.target.tagName === 'INPUT' || event.target.tagName === 'TEXTAREA' || event.target.isContentEditable)) return;
+			if (event.code === 'KeyR') window.location.reload();
+			else if (event.code === 'KeyC') window.location.href = 'catalog.html';
+			else if (event.code === 'KeyI') window.location.href = 'index.html';
+		});
 	}
 
 	window.addEventListener('storage', (event) => {
@@ -1047,12 +1134,12 @@
 
 	const clearAllDataLink = document.createElement('a');
 	clearAllDataLink.href = '#';
-	clearAllDataLink.textContent = 'Delete all site+script data(excluding cookies)';
+	clearAllDataLink.textContent = 'Delete site data and exit';
 	clearAllDataLink.style.display = 'block';
 	clearAllDataLink.addEventListener('click', async (e) => {
 		e.preventDefault();
 		localStorage.clear();
-		alert('Your settings and data have been cleared or something');
+		window.location.href = '/robots.txt';
 	});
 	debugMenu.appendChild(clearAllDataLink);
 	document.body.appendChild(debugMenu);
@@ -1309,7 +1396,7 @@
 		nextPageButton.disabled = true;
 
 		const url = `https://soybooru.com/booru/index.pageContext.json?q=${encodeURIComponent(tags)}&page=${page}&pageSize=50`;
-		let json;
+		let json = null;
 		let is404 = false;
 
 		try {
@@ -1320,8 +1407,6 @@
 			}
 			console.error('Error during search:', error);
 		}
-
-		console.log(json);
 
 		if (json) {
 			if (json.data?.searchResults) {
@@ -1905,7 +1990,7 @@
 		}
 
 		const img = document.createElement('img');
-		img.src = `https://raw.githubusercontent.com/extteen/soyjakparty-enhanced/refs/heads/main/icons/soymoji/${filename}`;
+		img.src = extUrlFor(`icons/soymoji/${filename}`);
 		img.alt = shortcode;
 		img.style.height = '30px';
 		img.style.width = 'auto';
